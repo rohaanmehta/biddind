@@ -1,0 +1,10 @@
+RewriteEngine On
+RewriteBase /bidding/
+
+# Allow direct access to existing files and folders
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Send all other requests to CodeIgniter front controller
+RewriteRule ^ index.php [L,QSA]
