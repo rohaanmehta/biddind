@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Products | ArtBid</title>
+    <title>My Products | <?= esc(env('APP_NAME', 'Art Bidster')) ?></title>
     <?= view('templates/assets') ?>
 </head>
 
@@ -93,9 +93,15 @@
                                         <td>
                                             <div class="product-table-actions">
                                                 <a href="<?= site_url('product/bids/' . $product['id']) ?>" class="btn btn-sm btn-outline-dark">View Bids</a>
+                                                <a href="<?= site_url('product/' . $product['id']) ?>" class="btn btn-sm btn-outline-dark" target="_blank" rel="noopener noreferrer" title="View product" aria-label="View <?= esc($product['product_name'], 'attr') ?>">
+                                                    <i class="fa-solid fa-eye"></i>
+                                                </a>
                                                 <a href="<?= site_url('product/edit/' . $product['id']) ?>" class="btn btn-sm btn-outline-dark" title="Edit product" aria-label="Edit product">
                                                     <i class="fa-solid fa-pen"></i>
                                                 </a>
+                                                <button type="button" class="btn btn-sm btn-outline-dark share-product-btn" data-url="<?= esc(site_url('product/' . $product['id']), 'attr') ?>" data-name="<?= esc($product['product_name'], 'attr') ?>" title="Share product" aria-label="Share <?= esc($product['product_name'], 'attr') ?>">
+                                                    <i class="fa-solid fa-share-nodes"></i>
+                                                </button>
                                                 <button type="button" class="btn btn-sm btn-outline-danger delete-product-btn" data-id="<?= $product['id'] ?>" title="Delete product" aria-label="Delete product">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </button>
@@ -116,9 +122,100 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?= base_url('public/assets/js/modal.js') ?>"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const uploadedProduct = sessionStorage.getItem('uploadedProductSuccess');
+            if (uploadedProduct && typeof Swal !== 'undefined') {
+                sessionStorage.removeItem('uploadedProductSuccess');
+
+                let uploadData = {};
+                try {
+                    uploadData = JSON.parse(uploadedProduct);
+                } catch (error) {
+                    uploadData = {};
+                }
+
+                const productUrl = uploadData.productUrl || '';
+                Swal.fire({
+                    title: 'Product uploaded successfully',
+                    html: '<p style="margin-bottom:12px;color:#6b7280;line-height:1.6;">Your artwork is live. Share the link below with friends and on social media so others can discover it and place bids.</p>' +
+                        (productUrl ? '<input id="shared-product-url" value="' + productUrl.replace(/["&<>']/g, '') + '" readonly style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:13px;">' : ''),
+                    icon: 'success',
+                    confirmButtonText: 'Share Product',
+                    showDenyButton: Boolean(productUrl),
+                    denyButtonText: 'Copy Link',
+                    confirmButtonColor: '#111111',
+                    denyButtonColor: '#111111',
+                    width: 480,
+                    customClass: {
+                        confirmButton: 'swal-confirm-dark',
+                        denyButton: 'swal-copy-link'
+                    }
+                }).then(async function(result) {
+                    if (!productUrl) return;
+
+                    if (result.isConfirmed && navigator.share) {
+                        try {
+                            await navigator.share({
+                                title: 'View this artwork auction',
+                                text: 'Discover this artwork and place your bid.',
+                                url: productUrl
+                            });
+                        } catch (error) {
+                            if (error && error.name !== 'AbortError') {
+                                window.alert('Unable to share the product link.');
+                            }
+                        }
+                    } else if (result.isConfirmed) {
+                        try {
+                            await navigator.clipboard.writeText(productUrl);
+                            // window.alert('Product link copied to clipboard.');
+                        } catch (error) {
+                            window.alert(productUrl);
+                        }
+                    } else if (result.isDenied) {
+                        try {
+                            await navigator.clipboard.writeText(productUrl);
+                            // window.alert('Product link copied to clipboard.');
+                        } catch (error) {
+                            window.alert(productUrl);
+                        }
+                    }
+                });
+            }
+
+            document.querySelectorAll('.share-product-btn').forEach(function(button) {
+                button.addEventListener('click', async function() {
+                    const productUrl = this.dataset.url;
+                    const productName = this.dataset.name || 'Artwork auction';
+                    const shareData = {
+                        title: productName,
+                        text: 'View this artwork auction and place your bid.',
+                        url: productUrl
+                    };
+
+                    try {
+                        if (navigator.share) {
+                            await navigator.share(shareData);
+                            return;
+                        }
+
+                        await navigator.clipboard.writeText(productUrl);
+                        if (window.showNotify) {
+                            window.showNotify('Product link copied to clipboard.', 'success');
+                        } else {
+                            alert('Product link copied to clipboard.');
+                        }
+                    } catch (error) {
+                        if (error && error.name === 'AbortError') {
+                            return;
+                        }
+                        alert(productUrl);
+                    }
+                });
+            });
+
             document.querySelectorAll('.delete-product-btn').forEach(function(button) {
                 button.addEventListener('click', function() {
                     const productId = this.dataset.id;

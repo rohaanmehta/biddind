@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marketplace | ArtBid</title>
-    <?= view('templates/assets') ?>
+    <title>Art Marketplace | Live Painting Auctions | <?= esc(env('APP_NAME', 'Art Bidster')) ?></title>
+    <?= view('templates/assets', [
+        'metaDescription' => 'Browse original paintings and live art auctions. Search artworks by category or artist and place your bid on ' . env('APP_NAME', 'Art Bidster') . '.',
+        'ogTitle' => 'Art Marketplace | Live Painting Auctions | ' . env('APP_NAME', 'Art Bidster'),
+        'canonicalUrl' => base_url('marketplace'),
+        'ogType' => 'website'
+    ]) ?>
 </head>
 <body>
     <?= view('templates/header', ['page' => 'marketplace']) ?>
@@ -61,10 +66,6 @@
         </section>
     </main>
 
-    <?= view('templates/login_modal') ?>
-    <?= view('templates/register_modal') ?>
-
-    <script src="<?= base_url('public/assets/js/modal.js') ?>"></script>
     <script>
         const totalProducts = <?= (int) ($totalProducts ?? 0) ?>;
         const searchTerm = '<?= addslashes((string) ($searchTerm ?? '')) ?>';

@@ -37,7 +37,7 @@ if ($startDate && $endDate) {
     <div class="card-body">
         <div class="card-title-wrap">
             <div>
-                <h3><?= esc($product['product_name']) ?></h3>
+                <h3><a href="<?= base_url('product/' . (int) ($product['id'] ?? 0)) ?>"><?= esc($product['product_name']) ?></a></h3>
                 <p>By <?= esc(ucwords(strtolower((string) ($product['uploader_name'] ?? 'Unknown Seller')))) ?></p>
             </div>
             <span class="card-tag"><?= esc($statusLabel) ?></span>

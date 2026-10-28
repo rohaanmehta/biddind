@@ -108,6 +108,9 @@ class Auth extends BaseController
         $name = trim($this->request->getPost('name'));
         $email = trim($this->request->getPost('email'));
         $phone = trim($this->request->getPost('phone'));
+        $bankName = trim($this->request->getPost('bank_name'));
+        $accountNo = trim($this->request->getPost('account_no'));
+        $ifsc = strtoupper(trim($this->request->getPost('ifsc')));
 
         if ($name === '' || $email === '' || $phone === '') {
             if ($this->request->isAJAX()) {
@@ -146,6 +149,9 @@ class Auth extends BaseController
                 'name' => $name,
                 'email' => $email,
                 'phone' => $phone,
+                'bank_name' => $bankName !== '' ? $bankName : null,
+                'account_no' => $accountNo !== '' ? $accountNo : null,
+                'ifsc' => $ifsc !== '' ? $ifsc : null,
                 'updated_at' => date('Y-m-d H:i:s'),
             ]);
 

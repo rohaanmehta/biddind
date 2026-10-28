@@ -7,6 +7,40 @@ document.addEventListener('DOMContentLoaded', function () {
     const productForm = document.getElementById('productUploadForm');
     const profileTrigger = document.querySelector('.profile-trigger');
     const profileMenu = document.querySelector('.profile-menu-wrap');
+    const mobileNavToggle = document.querySelector('.mobile-nav-toggle');
+    const mainNavigation = document.getElementById('mainNavigation');
+    const mobileNavClose = document.querySelector('.mobile-nav-close');
+    const mobileNavBackdrop = document.querySelector('.mobile-nav-backdrop');
+
+    function closeMobileNavigation() {
+        if (!mobileNavToggle || !mainNavigation || !mobileNavBackdrop) return;
+        mobileNavToggle.classList.remove('is-open');
+        mobileNavToggle.setAttribute('aria-expanded', 'false');
+        mobileNavToggle.setAttribute('aria-label', 'Open navigation menu');
+        mainNavigation.classList.remove('is-open');
+        mobileNavBackdrop.classList.remove('is-open');
+        document.body.classList.remove('mobile-nav-open');
+    }
+
+    if (mobileNavToggle && mainNavigation && mobileNavBackdrop) {
+        mobileNavToggle.addEventListener('click', function() {
+            const isOpen = !mainNavigation.classList.contains('is-open');
+            mobileNavToggle.classList.toggle('is-open', isOpen);
+            mobileNavToggle.setAttribute('aria-expanded', String(isOpen));
+            mobileNavToggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+            mainNavigation.classList.toggle('is-open', isOpen);
+            mobileNavBackdrop.classList.toggle('is-open', isOpen);
+            document.body.classList.toggle('mobile-nav-open', isOpen);
+        });
+
+        if (mobileNavClose) {
+            mobileNavClose.addEventListener('click', closeMobileNavigation);
+        }
+        mobileNavBackdrop.addEventListener('click', closeMobileNavigation);
+        mainNavigation.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', closeMobileNavigation);
+        });
+    }
 
     function showNotify(message, type = 'success') {
         let container = document.getElementById('notify-container');
@@ -74,7 +108,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const badge = document.createElement('div');
         badge.className = 'credits-prompt-badge';
-        badge.textContent = 'ArtBid Credits';
+        const brandName = document.querySelector('.brand-name');
+        badge.textContent = (brandName ? brandName.textContent.trim() : 'Art Bidster') + ' Credits';
 
         const title = document.createElement('h3');
         title.textContent = 'Buy credits to bid on art';
@@ -284,11 +319,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 if (data && data.success) {
-                    showNotify(data.message || 'Product uploaded successfully.', 'success');
+                    sessionStorage.setItem('uploadedProductSuccess', JSON.stringify({
+                        message: data.message || 'Product uploaded successfully.',
+                        productUrl: data.product_url || ''
+                    }));
                     productForm.reset();
                     setTimeout(() => {
                         window.location.href = '/bidding/my-products';
-                    }, 1000);
+                    }, 500);
                     return;
                 }
 
@@ -341,6 +379,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
+            closeMobileNavigation();
             document.querySelectorAll('.modal-backdrop.is-open').forEach((modal) => {
                 modal.classList.remove('is-open');
                 modal.setAttribute('aria-hidden', 'true');

@@ -9,6 +9,7 @@ use Config\Paths;
  *---------------------------------------------------------------
  */
 
+
 $minPhpVersion = '8.2'; // If you update this, don't forget to update `spark`.
 if (version_compare(PHP_VERSION, $minPhpVersion, '<')) {
     $message = sprintf(

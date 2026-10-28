@@ -1,6 +1,6 @@
 <div class="modal-backdrop" id="loginModal" aria-hidden="true">
     <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-        <button type="button" class="modal-close" data-close-modal="loginModal" aria-label="Close">×</button>
+        <!-- <button type="button" class="modal-close" data-close-modal="loginModal" aria-label="Close">×</button> -->
 
         <h3 id="loginTitle">Login</h3>
 

@@ -1,2 +1,17 @@
 User-agent: *
-Disallow: 
+Allow: /
+
+Disallow: /auth/
+Disallow: /upload-products
+Disallow: /edit-profile
+Disallow: /my-products
+Disallow: /my-bids
+Disallow: /transactions
+Disallow: /product/edit/
+Disallow: /product/bids/
+Disallow: /product/update/
+Disallow: /buy-credits
+Disallow: /payment-successful
+Disallow: /payment-failed
+
+Sitemap: http://localhost/bidding/sitemap.xml

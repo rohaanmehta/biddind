@@ -1,84 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title><?= lang('Errors.pageNotFound') ?></title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <title>Page Not Found | <?= esc(env('APP_NAME', 'Art Bidster')) ?></title>
+    <?= view('templates/assets') ?>
     <style>
-        div.logo {
-            height: 200px;
-            width: 155px;
-            display: inline-block;
-            opacity: 0.08;
-            position: absolute;
-            top: 2rem;
-            left: 50%;
-            margin-left: -73px;
+        .not-found-shell {
+            min-height: calc(100vh - 72px);
+            display: grid;
+            place-items: center;
+            padding: 48px 16px;
         }
-        body {
-            height: 100%;
-            background: #fafafa;
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-            color: #777;
-            font-weight: 300;
-        }
-        h1 {
-            font-weight: lighter;
-            letter-spacing: normal;
-            font-size: 3rem;
-            margin-top: 0;
-            margin-bottom: 0;
-            color: #222;
-        }
-        .wrap {
-            max-width: 1024px;
-            margin: 5rem auto;
-            padding: 2rem;
-            background: #fff;
+        .not-found-card {
+            width: min(100%, 620px);
             text-align: center;
-            border: 1px solid #efefef;
-            border-radius: 0.5rem;
-            position: relative;
+            border-radius: 8px;
         }
-        pre {
-            white-space: normal;
-            margin-top: 1.5rem;
-        }
-        code {
-            background: #fafafa;
-            border: 1px solid #efefef;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
+        .not-found-code {
             display: block;
+            color: #d9a765;
+            font-size: clamp(4rem, 16vw, 7rem);
+            line-height: 0.85;
+            font-weight: 800;
         }
-        p {
-            margin-top: 1.5rem;
+        .not-found-card h1 {
+            margin: 24px 0 12px;
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
         }
-        .footer {
-            margin-top: 2rem;
-            border-top: 1px solid #efefef;
-            padding: 1em 2em 0 2em;
-            font-size: 85%;
-            color: #999;
-        }
-        a:active,
-        a:link,
-        a:visited {
-            color: #dd4814;
+        .not-found-card p {
+            max-width: 480px;
+            margin: 0 auto 24px;
+            color: var(--muted);
+            line-height: 1.7;
         }
     </style>
 </head>
 <body>
-    <div class="wrap">
-        <h1>404</h1>
+    <?= view('templates/header', ['page' => '404']) ?>
 
-        <p>
-            <?php if (ENVIRONMENT !== 'production') : ?>
-                <?= nl2br(esc($message)) ?>
-            <?php else : ?>
-                <?= lang('Errors.sorryCannotFind') ?>
-            <?php endif; ?>
-        </p>
-    </div>
+    <main class="not-found-shell">
+        <section class="not-found-card panel-card p-4 p-md-5" aria-labelledby="notFoundTitle">
+            <span class="not-found-code">404</span>
+            <h1 id="notFoundTitle">Page not found</h1>
+            <p>The page may have moved, been removed, or the address may be incorrect.</p>
+            <a href="<?= base_url('/') ?>" class="primary-btn">Return to Home</a>
+        </section>
+    </main>
 </body>
 </html>

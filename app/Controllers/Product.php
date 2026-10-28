@@ -17,12 +17,12 @@ class Product extends BaseController
             ->where('p.user_id', $user['id'])
             ->orderBy('p.created_at', 'DESC');
 
-        if ($db->tableExists('currencies')) {
-            $productQuery->select('p.*, c.symbol AS currency_symbol')
-                ->join('currencies c', 'c.code = p.currency', 'left');
-        } else {
-            $productQuery->select('p.*, p.currency AS currency_symbol');
-        }
+        // if ($db->tableExists('currencies')) {
+        //     $productQuery->select('p.*, c.symbol AS currency_symbol')
+        //         ->join('currencies c', 'c.code = p.currency', 'left');
+        // } else {
+        //     $productQuery->select('p.*, p.currency AS currency_symbol');
+        // }
 
         $products = $productQuery->get()->getResultArray();
 
@@ -269,18 +269,37 @@ class Product extends BaseController
             ]);
         }
 
-        $creditRow = $db->table('credits')
-            ->where('userid', (int) $user['id'])
+        // $alreadyBid = $db->table('bid_history')
+        //     ->where('product_id', $productId)
+        //     ->where('user_id', $user['id'])
+        //     ->countAllResults() > 0;
+
+        $alreadyBid = $db->table('bid_history')
+            ->where('product_id', $productId)
+            ->where('user_id', (int) $user['id'])
+            ->countAllResults() > 0;
+
+        $minimum_credits = $db->table('settings')
+            ->select('value')
+            ->where('option', 'minimum_bid_value')
             ->get()
             ->getRowArray();
-        $availableCredits = (int) ($creditRow['credit'] ?? 0);
+        $requiredCredits = (int) ($minimum_credits['value'] ?? 300);
 
-        if ($availableCredits <= 300) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'You need 300 credits to place a bid.',
-                'redirect' => base_url('buy-credits'),
-            ]);
+        if (!$alreadyBid) {
+            $creditRow = $db->table('credits')
+                ->where('userid', (int) $user['id'])
+                ->get()
+                ->getRowArray();
+            $availableCredits = (int) ($creditRow['credit'] ?? 0);
+
+            if ($availableCredits < $requiredCredits) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'You need ' . $requiredCredits . ' credits to place a bid.',
+                    'redirect' => base_url('buy-credits'),
+                ]);
+            }
         }
 
         $currentBid = (float) ($product['minimum_price'] ?? 0);
@@ -291,19 +310,20 @@ class Product extends BaseController
             $finalBid = $minimumAllowed;
         }
 
+        if (!$alreadyBid) {
+            $creditRow = $db->table('credits')
+                ->where('userid', (int) $user['id'])
+                ->get()
+                ->getRowArray();
+            $availableCredits = (int) ($creditRow['credit'] ?? 0);
 
-        $minimum_credits = $db->table('settings')
-            ->select('value')
-            ->where('option', 'minimum_bid_value')
-            ->get()
-            ->getRowArray();
-
-        $db->table('credits')
-            ->where('userid', (int) $user['id'])
-            ->update([
-                'credit' => $availableCredits - $minimum_credits['value'],
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]);
+            $db->table('credits')
+                ->where('userid', (int) $user['id'])
+                ->update([
+                    'credit' => $availableCredits - $requiredCredits,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+        }
 
         $db->table('bid_history')
             ->insert([
@@ -416,6 +436,33 @@ class Product extends BaseController
             ]);
         }
 
+        $startDateTime = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $biddingStartDate);
+        $endDateTime = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $biddingEndDate);
+        $validStartFormat = $startDateTime && $startDateTime->format('Y-m-d H:i') === $biddingStartDate;
+        $validEndFormat = $endDateTime && $endDateTime->format('Y-m-d H:i') === $biddingEndDate;
+
+        if (!$validStartFormat || !$validEndFormat) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Please enter valid bid start and end dates.'
+            ]);
+        }
+
+        if ($endDateTime <= $startDateTime) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Bid end date and time must be after the bid start date and time.'
+            ]);
+        }
+
+        $maximumEndDateTime = $startDateTime->modify('+1 month');
+        if ($endDateTime > $maximumEndDateTime) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Bid end date and time cannot be more than 1 month after the start date.'
+            ]);
+        }
+
         try {
             $db = db_connect();
             $this->ensureProductsTable($db);
@@ -462,9 +509,16 @@ class Product extends BaseController
                 ]);
             }
 
+            $productId = $db->insertID();
+            $productUrl = $productId
+                ? site_url('product/' . $productId)
+                : site_url('my-products');
+
             return $this->response->setJSON([
                 'success' => true,
-                'message' => 'Product uploaded successfully.'
+                'message' => 'Product uploaded successfully.',
+                'product_id' => $productId,
+                'product_url' => $productUrl
             ]);
         } catch (\Throwable $e) {
             log_message('error', 'Product upload failed: ' . $e->getMessage());

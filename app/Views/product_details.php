@@ -50,12 +50,19 @@ if ($auctionStart && $auctionEnd) {
 
 $auctionEnded = $auctionEnd && $now > $auctionEnd;
 $currentUserCredits = 0;
+$userAlreadyPlacedBid = false;
 if (!empty(session('logged_in_user')['id'])) {
     $userId = (int) session('logged_in_user')['id'];
     $db = db_connect();
     if ($db && $db->tableExists('credits')) {
         $creditRow = $db->table('credits')->where('userid', $userId)->get()->getRowArray();
         $currentUserCredits = (int) ($creditRow['credit'] ?? 0);
+    }
+    if ($db && $db->tableExists('bid_history')) {
+        $userAlreadyPlacedBid = (bool) $db->table('bid_history')
+            ->where('product_id', (int) ($product['id'] ?? 0))
+            ->where('user_id', $userId)
+            ->countAllResults() > 0;
     }
 }
 ?>
@@ -65,12 +72,57 @@ if (!empty(session('logged_in_user')['id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= esc($product['product_name'] ?? 'Artwork') ?> | ArtBid</title>
-    <?= view('templates/assets') ?>
+    <?php
+        $seoProductName = trim((string) ($product['product_name'] ?? 'Artwork'));
+        $seoDescriptionSource = trim((string) ($product['description'] ?? 'Discover this artwork and place your bid in a live online art auction.'));
+        $seoDescription = strlen($seoDescriptionSource) > 155 ? substr($seoDescriptionSource, 0, 152) . '...' : $seoDescriptionSource;
+        $seoImage = !empty($images[0]) ? base_url(str_replace('\\', '/', $images[0])) : base_url('public/img/logo.png');
+    ?>
+    <title><?= esc($seoProductName) ?> | Bid on Artwork | <?= esc(env('APP_NAME', 'Art Bidster')) ?></title>
+    <?= view('templates/assets', [
+        'metaDescription' => $seoDescription,
+        'ogTitle' => $seoProductName . ' | Live Artwork Auction',
+        'canonicalUrl' => site_url('product/' . (int) $product['id']),
+        'ogImage' => $seoImage,
+        'ogType' => 'product'
+    ]) ?>
+    <script type="application/ld+json">
+    <?= json_encode([
+        '@context' => 'https://schema.org',
+        '@type' => 'Product',
+        'name' => $seoProductName,
+        'description' => $seoDescriptionSource,
+        'image' => $seoImage,
+        'url' => site_url('product/' . (int) $product['id']),
+        'offers' => [
+            '@type' => 'Offer',
+            'priceCurrency' => $currencyCode,
+            'price' => (string) $currentBidPriceValue,
+            'availability' => $auctionStatus === 'Ended' ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
+            'url' => site_url('product/' . (int) $product['id'])
+        ]
+    ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
+    </script>
+    <script type="application/ld+json">
+    <?= json_encode([
+        '@context' => 'https://schema.org',
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => [
+            ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => base_url()],
+            ['@type' => 'ListItem', 'position' => 2, 'name' => 'Marketplace', 'item' => base_url('marketplace')],
+            ['@type' => 'ListItem', 'position' => 3, 'name' => $seoProductName, 'item' => site_url('product/' . (int) $product['id'])]
+        ]
+    ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .art-card {
+            box-shadow: none !important;
+        }
+    </style>
 </head>
 
-<body class="detail-page-body" data-user-logged-in="<?= !empty(session('logged_in_user')) ? '1' : '0' ?>" data-user-credits="<?= esc((string) $currentUserCredits) ?>">
+<body class="detail-page-body" data-user-logged-in="<?= !empty(session('logged_in_user')) ? '1' : '0' ?>" data-user-credits="<?= esc((string) $currentUserCredits) ?>" data-user-bid-exists="<?= $userAlreadyPlacedBid ? '1' : '0' ?>">
     <?= view('templates/header', ['page' => 'marketplace']) ?>
 
     <main class="detail-page-shell">
@@ -109,7 +161,13 @@ if (!empty(session('logged_in_user')['id'])) {
 
             <aside class="detail-side-panel panel-card">
                 <div class="detail-header-block">
-                    <span class="detail-heading-tag"><?= esc($auctionStatus).' Auction' ?></span>
+                    <div class="detail-header-row">
+                        <span class="detail-heading-tag"><?= esc($auctionStatus) . ' Auction' ?></span>
+                        <button type="button" class="product-share-btn" aria-label="Share this artwork">
+                            <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                            <span>Share</span>
+                        </button>
+                    </div>
                     <h1><?= esc($product['product_name'] ?? 'Untitled Artwork') ?></h1>
                 </div>
 
@@ -118,7 +176,13 @@ if (!empty(session('logged_in_user')['id'])) {
                 <div class="detail-bid-card">
                     <div class="detail-bid-row">
                         <div class="detail-stat-box">
-                            <span class="detail-stat-label">Current Bid</span>
+                            <?php if ($auctionStatus == 'Live') { ?>
+                                <span class="detail-stat-label">Current Bid</span>
+                            <?php } elseif ($auctionStatus == 'Upcoming') { ?>
+                                <span class="detail-stat-label">Price</span>
+                            <?php } else { ?>
+                                <span class="detail-stat-label">Sold Price</span>
+                            <?php } ?>
                             <strong><?= esc($currencySymbol) ?> <?= esc($currentBidPrice) ?></strong>
                         </div>
                         <?php if ($auctionStatus === 'Upcoming'): ?>
@@ -141,6 +205,10 @@ if (!empty(session('logged_in_user')['id'])) {
                                 <button type="button" class="detail-bid-step detail-bid-increase" data-step="1" aria-label="Increase bid">Increase Bid</button>
                             </div>
                             <div class="detail-bid-total">Bid For: <strong><?= esc($currencySymbol) ?> <span id="bid-total-value"><?= esc($defaultBidDisplay) ?></span></strong></div>
+                            <div class="bid-credit-notice" role="note">
+                                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                                <p class="detail-bid-total text-danger mb-0">Credits are deducted only once per product and are refunded automatically if you do not win the auction.</p>
+                            </div>
                             <button type="button" class="primary-btn detail-submit-btn">Place Bid</button>
                             <small>Minimum Bid: <?= esc($currencySymbol) ?> <?= esc($bidRaise) ?></small>
                         </div>
@@ -202,11 +270,8 @@ if (!empty(session('logged_in_user')['id'])) {
         </section>
     </main>
 
-    <?= view('templates/login_modal') ?>
-    <?= view('templates/register_modal') ?>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
-    <script src="<?= base_url('public/assets/js/modal.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mainImage = document.querySelector('.detail-main-image');
@@ -219,14 +284,45 @@ if (!empty(session('logged_in_user')['id'])) {
             const productId = Number(<?php echo json_encode((int) ($product['id'] ?? 0)); ?>);
             const bidStep = Number(<?php echo json_encode((float) ($product['bid_raise_price'] ?? 0)); ?>);
             const minimumBid = Number(<?php echo json_encode((float) ($product['minimum_price'] ?? 0)); ?>);
-            const requiredBidCredits = '<?= $minimum_credits; ?>';
+            const requiredBidCredits = Number(<?= (int) ($minimum_credits ?? 300) ?>);
             const currentBidValue = Number(<?php echo json_encode((float) ($product['current_bid_price'] ?? $product['minimum_price'] ?? 0)); ?>);
             const startingBid = bidStep > 0 ? currentBidValue + bidStep : currentBidValue;
             const userCredits = Number(document.body.dataset.userCredits || 0);
+            const userBidExists = document.body.dataset.userBidExists === '1';
             let previewBid = startingBid;
             const formatAmount = (value) => new Intl.NumberFormat('en-IN', {
                 maximumFractionDigits: 0
             }).format(Number(value || 0));
+
+            const shareButton = document.querySelector('.product-share-btn');
+            if (shareButton) {
+                shareButton.addEventListener('click', async function() {
+                    const shareData = {
+                        title: <?= json_encode($product['product_name'] ?? 'Artwork') ?>,
+                        text: 'View this artwork auction on <?= esc(env('APP_NAME', 'Art Bidster')) ?>',
+                        url: window.location.href
+                    };
+
+                    try {
+                        if (navigator.share) {
+                            await navigator.share(shareData);
+                            return;
+                        }
+
+                        await navigator.clipboard.writeText(window.location.href);
+                        if (window.showNotify) {
+                            window.showNotify('Product link copied to clipboard.', 'success');
+                        }
+                    } catch (error) {
+                        if (error && error.name === 'AbortError') {
+                            return;
+                        }
+                        if (window.showNotify) {
+                            window.showNotify('Unable to share this product.', 'error');
+                        }
+                    }
+                });
+            }
 
             const updateCountdown = () => {
                 if (!countdownEl) {
@@ -383,7 +479,7 @@ if (!empty(session('logged_in_user')['id'])) {
                     return;
                 }
 
-                if (userCredits <= requiredBidCredits) {
+                if (userCredits < requiredBidCredits && !userBidExists) {
                     showInsufficientCreditsPopup();
                     return;
                 }

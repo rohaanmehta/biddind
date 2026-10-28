@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Profile | ArtBid</title>
+    <title>Edit Profile | <?= esc(env('APP_NAME', 'Art Bidster')) ?></title>
     <?= view('templates/assets') ?>
 </head>
 <body>
@@ -45,6 +45,26 @@
                         </div>
                     </div>
 
+                    <fieldset class="bank-details-section mt-4">
+                        <legend class="fw-semibold mb-3">Bank Details</legend>
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="bank_name">Bank Name</label>
+                                <input id="bank_name" type="text" name="bank_name" value="<?= esc($user['bank_name'] ?? '') ?>" maxlength="100" placeholder="Enter bank name">
+                            </div>
+
+                            <div class="form-row">
+                                <label for="account_no">Account Number</label>
+                                <input id="account_no" type="text" name="account_no" value="<?= esc($user['account_no'] ?? '') ?>" maxlength="100" inputmode="numeric" autocomplete="off" placeholder="Enter account number">
+                            </div>
+
+                            <div class="form-row">
+                                <label for="ifsc">IFSC Code</label>
+                                <input id="ifsc" type="text" name="ifsc" value="<?= esc($user['ifsc'] ?? '') ?>" maxlength="20" autocomplete="off" placeholder="Enter IFSC code">
+                            </div>
+                        </div>
+                    </fieldset>
+
                     <div class="form-actions">
                         <button type="submit" class="primary-btn">Save Changes</button>
                         <!-- <a href="<?= site_url('/') ?>" class="sell-btn" style="text-decoration: none; display: inline-block;">Cancel</a> -->
@@ -54,7 +74,6 @@
         </section>
     </main>
 
-    <script src="<?= base_url('public/assets/js/modal.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const form = document.getElementById('editProfileForm');

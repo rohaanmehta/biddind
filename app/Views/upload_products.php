@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Product | ArtBid</title>
+    <title>Upload Product | <?= esc(env('APP_NAME', 'Art Bidster')) ?></title>
     <?= view('templates/assets', ['include_flatpickr' => true]) ?>
 </head>
 
@@ -98,52 +98,47 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="<?= base_url('public/assets/js/modal.js') ?>"></script>
     <script>
-        const startPicker = flatpickr('#start_datetime', {
+        flatpickr('#start_datetime', {
             enableTime: true,
             dateFormat: 'Y-m-d H:i',
+            altInput: true,
+            altFormat: 'd-m-Y H:i',
             time_24hr: true,
             minDate: 'today',
             allowInput: true,
             defaultHour: 0,
-            defaultMinute: 0,
-            onChange: function(selectedDates, dateStr, instance) {
-                if (document.getElementById('end_datetime').value) {
-                    const start = new Date(dateStr);
-                    const end = new Date(document.getElementById('end_datetime').value);
-
-                    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start > end) {
-                        if (typeof showNotify === 'function') {
-                            showNotify('Bid start date and time cannot be after bid end date and time.', 'error');
-                        }
-                        instance.clear();
-                    }
-                }
-            }
+            defaultMinute: 0
         });
 
-        const endPicker = flatpickr('#end_datetime', {
+        const parseAuctionDateTime = function(value) {
+            if (!value) return null;
+
+            const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2})$/.exec(value.trim());
+            if (!match) return null;
+
+            const parsed = new Date(
+                Number(match[1]),
+                Number(match[2]) - 1,
+                Number(match[3]),
+                Number(match[4]),
+                Number(match[5]),
+                0,
+                0
+            );
+            return isNaN(parsed.getTime()) ? null : parsed;
+        };
+
+        flatpickr('#end_datetime', {
             enableTime: true,
             dateFormat: 'Y-m-d H:i',
+            altInput: true,
+            altFormat: 'd-m-Y H:i',
             time_24hr: true,
             minDate: 'today',
             allowInput: true,
             defaultHour: 0,
-            defaultMinute: 0,
-            onChange: function(selectedDates, dateStr, instance) {
-                if (document.getElementById('start_datetime').value) {
-                    const start = new Date(document.getElementById('start_datetime').value);
-                    const end = new Date(dateStr);
-
-                    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end < start) {
-                        if (typeof showNotify === 'function') {
-                            showNotify('Bid end date and time cannot be less than bid start date and time.', 'error');
-                        }
-                        instance.clear();
-                    }
-                }
-            }
+            defaultMinute: 0
         });
 
         const imageInput = document.getElementById('product_images');
@@ -188,16 +183,36 @@
 
             if (!start || !end) {
                 event.preventDefault();
+                event.stopImmediatePropagation();
                 if (typeof showNotify === 'function') {
                     showNotify('Please select both bid start and end date and time.', 'error');
                 }
                 return;
             }
 
-            if (new Date(end) < new Date(start)) {
+            const parsedStart = parseAuctionDateTime(start);
+            const parsedEnd = parseAuctionDateTime(end);
+
+            if (parsedStart && parsedEnd && parsedEnd <= parsedStart) {
                 event.preventDefault();
+                event.stopImmediatePropagation();
                 if (typeof showNotify === 'function') {
-                    showNotify('Bid end date and time cannot be less than bid start date and time.', 'error');
+                    showNotify('Bid end date and time must be after the bid start date and time.', 'error');
+                }
+            } else if (parsedStart && parsedEnd) {
+                const oneMonthEnd = new Date(parsedStart);
+                const originalDay = oneMonthEnd.getDate();
+                oneMonthEnd.setDate(1);
+                oneMonthEnd.setMonth(oneMonthEnd.getMonth() + 1);
+                const lastDayOfMaximumMonth = new Date(oneMonthEnd.getFullYear(), oneMonthEnd.getMonth() + 1, 0).getDate();
+                oneMonthEnd.setDate(Math.min(originalDay, lastDayOfMaximumMonth));
+
+                if (parsedEnd > oneMonthEnd) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    if (typeof showNotify === 'function') {
+                        showNotify('Bid end date and time cannot be more than 1 month after the start date.', 'error');
+                    }
                 }
             }
         });

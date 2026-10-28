@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Bids | ArtBid</title>
+    <title>Product Bids | <?= esc(env('APP_NAME', 'Art Bidster')) ?></title>
     <?= view('templates/assets') ?>
 </head>
 
@@ -83,7 +83,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?= base_url('public/assets/js/modal.js') ?>"></script>
 </body>
 
 </html>

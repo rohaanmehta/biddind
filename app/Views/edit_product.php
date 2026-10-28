@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Product | ArtBid</title>
+    <title>Edit Product | <?= esc(env('APP_NAME', 'Art Bidster')) ?></title>
     <?= view('templates/assets') ?>
 </head>
 
@@ -122,7 +122,6 @@
             </div>
         </div>
     </main>
-    <script src="<?= base_url('public/assets/js/modal.js') ?>"></script>
     <script>
         const editImageInput = document.getElementById('product_images');
         const newImagePreviewContainer = document.getElementById('new_image_preview_container');
